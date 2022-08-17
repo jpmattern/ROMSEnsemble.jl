@@ -20,7 +20,7 @@ mutable struct ROMSFileManager
         rfm.logfilename = logfilename
 
         if rundirs isa String
-            rfm.rundirs = Glob.glob(basename(rundirs), dirname(rundirs))
+            rfm.rundirs = glob(basename(rundirs), dirname(rundirs))
             for d in rfm.rundirs
                 @assert(isdir(d), "\"$d\" must be a directory.")
             end
@@ -77,6 +77,7 @@ function create_directories(rfm::ROMSFileManager)
             mkdir(d)
         end
     end
+    nothing
 end
 
 function create_files(rfm::ROMSFileManager; verbose::Bool=false)
@@ -108,20 +109,22 @@ function create_files(rfm::ROMSFileManager; verbose::Bool=false)
                 else
                     @debug("   setting $(basename(currentfiles[linkinfo[1]])): $(linkinfo[2]) = $(currentfiles[linktarget])")
                 end
-                ROMSInFile.set_variable(currentfiles[linkinfo[1]], linkinfo[2], currentfiles[linktarget])
+                set_variable(currentfiles[linkinfo[1]], linkinfo[2], currentfiles[linktarget])
             end
         end
     end
 end
 
 function set(rfm::ROMSFileManager, dir::String, infilekey::String, key::String, value::String)
-    ROMSInFile.set_variable(joinpath(dir, rfm.localnames[infilekey]), key, value)
+    set_variable(joinpath(dir, rfm.localnames[infilekey]), key, value)
+    nothing
 end
 
 function set(rfm::ROMSFileManager, infilekey::String, key::String, value::String)
     for d in rfm.rundirs
         set(rfm, d, infilekey, key, value)
     end
+    nothing
 end
 
 function set(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{String, 1})
@@ -135,6 +138,7 @@ function set(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{S
     for (i, d) in enumerate(rfm.rundirs)
         set(rfm, d, infilekey, key, vals[i])
     end
+    nothing
 end
 
 function move_output(rfm::ROMSFileManager, todir::String; filenamemask::String="*.nc", verbose::Bool=false)
@@ -142,11 +146,12 @@ function move_output(rfm::ROMSFileManager, todir::String; filenamemask::String="
     for (i, d) in enumerate(rfm.rundirs)
         suffix = @sprintf("%03d", i)
         move_if_exists(joinpath(d, rfm.logfilename), suffix, todir, verbose=verbose)
-        fnames = Glob.glob(filenamemask, d)
+        fnames = glob(filenamemask, d)
         for fname in fnames
             move_if_exists(fname, suffix, todir, verbose=verbose)
         end
     end
+    nothing
 end
 
 function move_if_exists(fname::String, addsuffix::String, todir::String; verbose::Bool=false)
@@ -158,4 +163,5 @@ function move_if_exists(fname::String, addsuffix::String, todir::String; verbose
         end
         mv(fname, fname_new, force=true)
     end
+    nothing
 end

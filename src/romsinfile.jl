@@ -8,6 +8,7 @@ function get_variable(fname::String, varname::String)
             end
         end
     end
+    # error("Could not find variable $(varname) in \"$(fname)\".")
 end
 
 function set_variable(fname::String, varname::String, newvalue::Int)

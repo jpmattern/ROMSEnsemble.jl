@@ -47,12 +47,11 @@ function start_jobs(rs::ROMSStarter, rfm::ROMSFileManager; numjobs::Int=-1, moni
     nothing
 end
 
-
 #
 # helper functions
 #
 
-function run_finished(romslogfile::String)
+function run_finished(romslogfile::String) :: Bool
     # look for "ROMS/TOMS: DONE..."
     if !isfile(romslogfile)
         return false
@@ -193,6 +192,6 @@ function wait_for(rs::SBatchROMSStarter, irun::Int)
             rethrow(e)
         end
     end
-    return
+    nothing
 end
 

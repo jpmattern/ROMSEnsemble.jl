@@ -34,7 +34,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         @assert(length(cdates) == 1, "Initial conditions file must have one time step.")
         cdate = cdates[1]
     elseif config["initial_conditions"] isa Array{String, 1}
-        @assert(length(config["initial_conditions"]) == 1 || length(config["initial_conditions"]) == config["n_ens"], "Number of initial conditions files must be 1 or the number of ensemble members ($(config["n_ens"])).")
+        if length(config["initial_conditions"]) > 1 && length(config["initial_conditions"]) ≠ config["n_ens"]
+            error("Number of initial conditions files must be 1 or the number of ensemble members ($(config["n_ens"])); received $(length(config["initial_conditions"])).")
+        end
         for (i, f) in enumerate(config["initial_conditions"])
             cdates = get_time(f)
             @assert(length(cdates) == 1, "Initial conditions file \"$(f)\" must have one time step.")

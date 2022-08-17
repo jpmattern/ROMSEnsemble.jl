@@ -16,7 +16,6 @@ end
 # latin hypercube sampling for normalized parameters
 #
 
-
 mutable struct LHSROMSParameterInfo  <: ROMSParameterInfo
     parameter_names :: Array{String, 1}
     normalizing_values :: Array{Float64, 1}
@@ -32,15 +31,15 @@ mutable struct LHSROMSParameterInfo  <: ROMSParameterInfo
     end
 end
 
-function get_names(rpi::LHSROMSParameterInfo)
+function get_names(rpi::LHSROMSParameterInfo) :: Array{String}
     return rpi.parameter_names
 end
 
-function get_normalizing_values(rpi::LHSROMSParameterInfo)
+function get_normalizing_values(rpi::LHSROMSParameterInfo) :: Array{Float64}
     return rpi.normalizing_values
 end
 
-function get_values(rpi::LHSROMSParameterInfo, num::Int)
+function get_values(rpi::LHSROMSParameterInfo, num::Int) :: Array{Float64}
     # latin hypercube sampling
     num_p = length(rpi.parameter_names)
     v = zeros(num, num_p)
@@ -52,7 +51,7 @@ function get_values(rpi::LHSROMSParameterInfo, num::Int)
     return v.*transpose(rpi.normalizing_values)
 end
 
-function get_values(rpi::LHSROMSParameterInfo, oldvalues::Array{Float64, 2})
+function get_values(rpi::LHSROMSParameterInfo, oldvalues::Array{Float64, 2}) :: Array{Float64}
     # latin hypercube sampling
     (num, num_p) = size(oldvalues)
     @assert(num_p == length(rpi.parameter_names), "Invalid input size, number of parameters does not match.")

@@ -1,4 +1,4 @@
-function get_time(ncfile::String; timevar::String="ocean_time")
+function get_time(ncfile::AbstractString; timevar::String="ocean_time")
     NCDatasets.Dataset(ncfile) do nc
         return nc[timevar][:]
     end
@@ -25,9 +25,10 @@ function set_output_names(config::Dict, suffix::String)
         #@info "for template: setting $k=$v"
         set_variable(config["s4dvar_in"], k, v)
     end
+    nothing
 end
 
-function get_parameter_values(ncfile::String; varnames=["PhyIS", "Vm_NO3", "PhyMRD", "K_NO3", "ZooGR", "ZooEEN", "ZooMRD", "DetRR", "wDet"], checkagainst=nothing, thresh::Float64=1e-6)
+function get_parameter_values(ncfile::String, varnames::Array{String}; checkagainst=nothing, thresh::Float64=1e-6) :: Array{Float64}
     NCDatasets.Dataset(ncfile) do nc
         values = [ncread[v][1] for v in varnames]
     end
@@ -48,7 +49,7 @@ function get_parameter_values(ncfile::String; varnames=["PhyIS", "Vm_NO3", "PhyM
     return values
 end
 
-function make_abs(s::String)
+function make_abs(s::String) :: String
     if s[1] != '/'
         return joinpath(pwd(), s)
     else
@@ -56,8 +57,8 @@ function make_abs(s::String)
     end
 end
 
-function parse_config(yamlfilename::AbstractString)
-    config = YAML.load(open(yamlfilename))
+function parse_config(input::AbstractString) :: Dict{String, Any}
+    config = YAML.load(open(input); dicttype=Dict{String, Any}) :: Dict{String, Any}
     # initial_conditions
     if haskey(config, "initial_conditions") && config["initial_conditions"] isa AbstractString
         config["initial_conditions"] = glob(basename(config["initial_conditions"]), dirname(config["initial_conditions"]))
