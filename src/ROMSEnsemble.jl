@@ -15,7 +15,7 @@ import Glob: glob
 include("assimfunctions.jl")
 include("helperfunctions.jl")
 include("romsfilemanagers.jl")
-include("romsinfile.jl")
+include("romsinputfile.jl")
 include("romsparameterinfo.jl")
 include("romsstarters.jl")
 
