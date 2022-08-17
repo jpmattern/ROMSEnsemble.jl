@@ -6,6 +6,7 @@ end
 
 function set_output_names(config::Dict, suffix::String)
     # set local filenames
+    rif_ocean = ROMSInputFile(config["ocean_in"])
     for ft in ("gst", "rst", "his", "tlm", "tlf", "adj", "avg", "dia", "sta", "flt")
         k = uppercase(ft)*"NAME"
         #v = "$(config["file_prefix"])_$(ft)_$(suffix).nc"
@@ -16,14 +17,15 @@ function set_output_names(config::Dict, suffix::String)
             v = "$(config["file_prefix"])_$(ft).nc"
         end
         #@info "for template: setting $k=$v"
-        set_variable(config["ocean_in"], k, v)
+        rif_ocean[k] = v
     end
     if length(config["s4dvar_in"]) > 0
         ft = "mod"
         k = uppercase(ft)*"name"
         v = "$(config["file_prefix"])_$(ft)_$(suffix).nc"
         #@info "for template: setting $k=$v"
-        set_variable(config["s4dvar_in"], k, v)
+        rif_4dvar = ROMSInputFile(config["s4dvar_in"])
+        rif_4dvar[k] = v
     end
     nothing
 end

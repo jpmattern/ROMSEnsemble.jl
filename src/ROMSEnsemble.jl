@@ -177,15 +177,16 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         end
     end
 
+    rif_ocean = ROMSInputFile(config["ocean_in"])
     for (k, v) in config["paramchanges_ocean"]
         @debug "for template: setting $k=$v"
-        set_variable(config["ocean_in"], k, v)
+        rif_ocean[k] = v
     end
 
-    dt = parse(Float64, replace(get_variable(config["ocean_in"], "DT"), "d"=>"e"))
-    refdate = Dates.DateTime(replace(get_variable(config["ocean_in"], "TIME_REF"), r"\.0*d0*" => ""), "yyyymmdd")
-    ntasks = parse(Int, get_variable(config["ocean_in"], "NtileI"))
-    ntasks *= parse(Int, get_variable(config["ocean_in"], "NtileJ"))
+    dt = parse(Float64, replace(rif_ocean["DT"], "d"=>"e"))
+    refdate = Dates.DateTime(replace(rif_ocean["TIME_REF"], r"\.0*d0*" => ""), "yyyymmdd")
+    ntasks = parse(Int, rif_ocean["NtileI"])
+    ntasks *= parse(Int, rif_ocean["NtileJ"])
     @debug """dt=$dt
     refdate=$refdate
     ntasks=$ntasks"""
@@ -321,21 +322,21 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             nsteps = Int(config["spinup_days"]*86400/dt)
             dstart = (cdate-refdate).value/(86400*1000)
 
-            set_variable(config["ocean_in"], "DSTART", dstart)
-            set_variable(config["ocean_in"], "NTIMES", "$nsteps")
-            set_variable(config["ocean_in"], "NRST", "$nsteps")
+            rif_ocean["DSTART"] = dstart
+            rif_ocean["NTIMES"] = nsteps
+            rif_ocean["NRST"] = nsteps
 
             set_output_names(config, suffix)
             rfm.logfilename = "roms_$(suffix).log"
             # move from template to individual files
             create_files(rfm)
-            set(rfm, "oceanin", "ININAME", config["initial_conditions"])
+            set!(rfm, "oceanin", "ININAME", config["initial_conditions"])
 
             if config["estimationtype"] == "bioparameter"
                 for (i, name) in enumerate(parameter_names)
                     tmp = [@sprintf("%f", x) for x in parameter_values[:, i]]
                     #@info "$(i), $(name): $(tmp)"
-                    set(rfm, "bioin", name, tmp)
+                    set!(rfm, "bioin", name, tmp)
                 end
             end
 
@@ -420,9 +421,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         # set up new cycle
         #
 
-        set_variable(config["ocean_in"], "DSTART", dstart)
-        set_variable(config["ocean_in"], "NTIMES", "$nsteps")
-        set_variable(config["ocean_in"], "NRST", "$nsteps")
+        rif_ocean["DSTART"] = dstart
+        rif_ocean["NTIMES"] = nsteps
+        rif_ocean["NRST"] = nsteps
 
         # keep copy of rstfiles to be used a initial conditions throughout
         # all inner loops if iterconstini is active (for parameter estimation)
@@ -479,14 +480,14 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
 
                 # move from template to individual files
                 if startfrom1
-                    set(rfm, "oceanin", "ININAME", inifiles[1])
+                    set!(rfm, "oceanin", "ININAME", inifiles[1])
                 else
                     for (i, f) in enumerate(inifiles[1:num_ens_curr])
                         if ! isfile(f)
                             error("Initial file \"$(f)\" does not exist.")
                         end
                     end
-                    set(rfm, "oceanin", "ININAME", inifiles[1:num_ens_curr])
+                    set!(rfm, "oceanin", "ININAME", inifiles[1:num_ens_curr])
                 end
                 if config["estimationtype"] == "bioparameter"
 
@@ -497,7 +498,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                     for (i, name) in enumerate(parameter_names)
                         tmp = [@sprintf("%f", x) for x in parameter_values[1:num_ens_curr, i]]
                         #@info "$(i), $(name): $(tmp)"
-                        set(rfm, "bioin", name, tmp)
+                        set!(rfm, "bioin", name, tmp)
                     end
                 end
 
@@ -760,7 +761,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                             set_output_names(config, suffix)
                             create_files(rfm)
 
-                            set(rfm, "oceanin", "ININAME", output)
+                            set!(rfm, "oceanin", "ININAME", output)
 
                             start_jobs(rs, rfm)
                             @info "moving model output to \"$(config["storagedir"])\""

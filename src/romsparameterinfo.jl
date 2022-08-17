@@ -16,18 +16,14 @@ end
 # latin hypercube sampling for normalized parameters
 #
 
-mutable struct LHSROMSParameterInfo  <: ROMSParameterInfo
+struct LHSROMSParameterInfo <: ROMSParameterInfo
     parameter_names :: Array{String, 1}
     normalizing_values :: Array{Float64, 1}
     normrange :: Array{Float64}
     function LHSROMSParameterInfo(parameter_names, normalizing_values, normrange)
         @assert(length(parameter_names)==length(normalizing_values), "Arrays containing parameter names and normalizing values must have the same number of entries.")
         @assert(length(normrange)==2, "Input normrange requires 2 entries.")
-        rpi = new()
-        rpi.parameter_names = parameter_names
-        rpi.normalizing_values = normalizing_values
-        rpi.normrange = normrange
-        return rpi
+        return new(parameter_names, normalizing_values, normrange)
     end
 end
 

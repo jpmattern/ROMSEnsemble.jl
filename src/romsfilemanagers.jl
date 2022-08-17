@@ -109,34 +109,37 @@ function create_files(rfm::ROMSFileManager; verbose::Bool=false)
                 else
                     @debug("   setting $(basename(currentfiles[linkinfo[1]])): $(linkinfo[2]) = $(currentfiles[linktarget])")
                 end
-                set_variable(currentfiles[linkinfo[1]], linkinfo[2], currentfiles[linktarget])
+                rif = ROMSInputFile(currentfiles[linkinfo[1]])
+                rif[linkinfo[2]] = currentfiles[linktarget]
             end
         end
     end
 end
 
-function set(rfm::ROMSFileManager, dir::String, infilekey::String, key::String, value::String)
-    set_variable(joinpath(dir, rfm.localnames[infilekey]), key, value)
+function set!(rfm::ROMSFileManager, dir::String, infilekey::String, key::String, value::String)
+    # set_variable(joinpath(dir, rfm.localnames[infilekey]), key, value)
+    rif = ROMSInputFile(joinpath(dir, rfm.localnames[infilekey]))
+    rif[key] = value
     nothing
 end
 
-function set(rfm::ROMSFileManager, infilekey::String, key::String, value::String)
+function set!(rfm::ROMSFileManager, infilekey::String, key::String, value::String)
     for d in rfm.rundirs
-        set(rfm, d, infilekey, key, value)
+        set!(rfm, d, infilekey, key, value)
     end
     nothing
 end
 
-function set(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{String, 1})
+function set!(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{String, 1})
     if length(vals) == 1
         for (i, d) in enumerate(rfm.rundirs)
-            set(rfm, d, infilekey, key, vals[1])
+            set!(rfm, d, infilekey, key, vals[1])
         end
         return
     end
     @assert(length(rfm.rundirs) == length(vals), "Length of values ($(length(vals))) must match number of runs ($(length(rfm.rundirs))).")
     for (i, d) in enumerate(rfm.rundirs)
-        set(rfm, d, infilekey, key, vals[i])
+        set!(rfm, d, infilekey, key, vals[i])
     end
     nothing
 end
