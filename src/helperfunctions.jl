@@ -4,7 +4,7 @@ function get_time(ncfile::AbstractString; timevar::String="ocean_time")
     end
 end
 
-function set_output_names(config::Dict, suffix::String)
+function set_output_names!(config::Dict, suffix::String)
     # set local filenames
     rif_ocean = ROMSInputFile(config["ocean_in"])
     for ft in ("gst", "rst", "his", "tlm", "tlf", "adj", "avg", "dia", "sta", "flt")
@@ -67,7 +67,7 @@ function parse_config(input::AbstractString) :: Dict{String, Any}
     end
     # assimilation_function
     if haskey(config, "assimilation_function") && config["assimilation_function"] isa AbstractString
-        config["assimilation_function"] = eval(Meta.parse(config["assimilation_function"]))
+        config["assimilation_function"] = eval(Meta.parse(config["assimilation_function"])) :: Function
     end
     return config
 end

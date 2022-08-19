@@ -18,6 +18,7 @@ include("romsfilemanagers.jl")
 include("romsinputfile.jl")
 include("romsparameterinfo.jl")
 include("romsstarters.jl")
+include("errors.jl")
 
 function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_function::Union{Nothing, Function}=nothing, biolog_sqobserror::Float64=0.09)
 
@@ -31,23 +32,27 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
     # get current date from initial file
     if config["initial_conditions"] isa AbstractString
         cdates = get_time(config["initial_conditions"])
-        @assert(length(cdates) == 1, "Initial conditions file must have one time step.")
+        if length(cdates) ≠ 1
+            throw(ConfigurationError("Initial conditions file must have one time step.", "initial_conditions"))
+        end
         cdate = cdates[1]
     elseif config["initial_conditions"] isa Array{String, 1}
         if length(config["initial_conditions"]) > 1 && length(config["initial_conditions"]) ≠ config["n_ens"]
-            error("Number of initial conditions files must be 1 or the number of ensemble members ($(config["n_ens"])); received $(length(config["initial_conditions"])).")
+            throw(ConfigurationError("Number of initial conditions files must be 1 or the number of ensemble members ($(config["n_ens"])); received $(length(config["initial_conditions"])).", "initial_conditions"))
         end
         for (i, f) in enumerate(config["initial_conditions"])
             cdates = get_time(f)
-            @assert(length(cdates) == 1, "Initial conditions file \"$(f)\" must have one time step.")
+            if length(cdates) ≠ 1
+                throw(ConfigurationError("Initial conditions file \"$(f)\" must have one time step.", "initial_conditions"))
+            end
             if i == 1
                 cdate = cdates[1]
-            else
-                @assert(cdate == cdates[1], "Initial conditions files must all have the same time (problem with \"$(f)\").")
+            elseif cdate ≠ cdates[1]
+                throw(ConfigurationError("Initial conditions files must all have the same time (problem with \"$(f)\").", "initial_conditions"))
             end
         end
     else
-        error("Invalid format for \"initial_conditions\" in configuration.")
+        throw(ConfigurationError("Invalid format for \"initial_conditions\"."))
     end
 
     if haskey(config, "use_normcost") && config["use_normcost"]
@@ -78,7 +83,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         if ! haskey(config, "negative_parameter_response")
             config["negative_parameter_response"] = "adjust"
         else
-            @assert(config["negative_parameter_response"] in ("warn", "error", "adjust"), "In configuration, negative_parameter_response must be one of \"warn\", \"error\", \"adjust\".")
+            if config["negative_parameter_response"] ∉ ("warn", "error", "adjust")
+                throw(ConfigurationError("Value of negative_parameter_response must be one of \"warn\", \"error\", \"adjust\"."))
+            end
         end
     end
 
@@ -142,13 +149,15 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
 
     if haskey(config, "use_modforobs") && config["use_modforobs"]
         if ! haskey(config, "modfile")
-            error("A mod-file must be specified when \"use_modforobs\" is active.")
+            throw(ConfigurationError("A mod-file must be specified when \"use_modforobs\" is active.", "modfile"))
         end
         @info "using NLmodel_value from mod-file as observations (source: \"$(config["modfile"])\")."
         NCDatasets.Dataset(config["modfile"]) do nc
             obs_values = nc["NLmodel_value"][:]
         end
-        @assert(length(obs_info["obs_time"])==length(obs_values), "The mod-file is not compatible with the specified observation file.")
+        if length(obs_info["obs_time"]) ≠ length(obs_values)
+            throw(ConfigurationError("The mod-file is not compatible with the specified observation file."))
+        end
         #=
         # TODO-low implement obs error here
         obs_values = mod_values_goal
@@ -200,7 +209,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             @warn("Using \"cycle_length\" to determine stop dates, ignoring value of \"stopdates\" in configuration.")
         end
         if ! haskey(config, "num_cycles")
-            error("Variable \"num_cycles\" expected in configuration.")
+            throw(ConfigurationError("Variable \"num_cycles\" expected in configuration.", "num_cycles"))
         end
 
         stopdates = [cdate+Dates.Day(config["spinup_days"] + i*config["cycle_length"]) for i in 1:config["num_cycles"]]
@@ -251,7 +260,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
     elseif config["estimationtype"] == "state"
         # TODO preparation needed?
     elseif config["estimationtype"] != "spinup-only"
-        error("Invalid estimationtype \"$(config["estimationtype"])\".")
+        throw(ConfigurationError("Invalid estimation type \"$(config["estimationtype"])\".", "estimationtype"))
     end
 
     refillensemble = false
@@ -279,7 +288,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         cycle_setup = [num_ens, num_ens] # NOTE changed 2020-05-04
         noassimlastiter = true
     else
-        error("Invalid cycle_setup \"$(config["cycle_setup"])\".")
+        throw(ConfigurationError("Invalid cycle setup \"$(config["cycle_setup"])\".", "cycle_setup"))
     end
     num_iter = length(cycle_setup)
 
@@ -308,7 +317,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         if config["initial_conditions"] isa  AbstractString || length(config["initial_conditions"]) == 1
             num_ens_curr = 1
         else
-            @assert(length(config["initial_conditions"]) == num_ens, "Number of initial conditions files must be 1 or the number of ensemble members ($num_ens).")
+            if length(config["initial_conditions"]) ≠ num_ens
+                throw(ConfigurationError("Number of initial conditions files must be 1 or the number of ensemble members ($num_ens)."))
+            end
         end
 
         if isfile(joinpath(config["storagedir"], "$(config["file_prefix"])_rst_$(suffix)_001.nc"))
@@ -326,7 +337,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             rif_ocean["NTIMES"] = nsteps
             rif_ocean["NRST"] = nsteps
 
-            set_output_names(config, suffix)
+            set_output_names!(config, suffix)
             rfm.logfilename = "roms_$(suffix).log"
             # move from template to individual files
             create_files(rfm)
@@ -354,15 +365,20 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         #
 
         rstfiles = glob("$(config["file_prefix"])_rst_$(suffix)_*.nc", config["storagedir"])
-        @assert(length(rstfiles) == num_ens_curr, "Expected $(num_ens_curr) restart files but found $(length(rstfiles)).")
-        @assert(issorted(rstfiles), "The restart files are not in correct order.")
+        if length(rstfiles) ≠ num_ens_curr
+            throw(ROMSError("Expected $(num_ens_curr) restart files but found $(length(rstfiles))."))
+        end
 
         cdate += Dates.Day(config["spinup_days"])
         for (irst, rstfile) in enumerate(rstfiles)
             cdates = get_time(rstfile)
             @info cdates
-            @assert(length(cdates) == 1, "Restart file must have one time step, but found $(length(cdates)) (\"$(rstfile)\").")
-            @assert(cdates[1] == cdate, "Date in restart file ($(cdates[1])) was expected to be $(cdate).\nFile: \"$(rstfile)\"")
+            if length(cdates) ≠ 1
+                throw(ROMSError("Restart file must have one time step, but found $(length(cdates)).", rstfile))
+            end
+            if cdates[1] ≠ cdate
+                throw(ROMSError("Date in restart file ($(cdates[1])) was expected to be $(cdate).", rstfile))
+            end
             if config["estimationtype"] == "bioparameter"
                 # perform check to see that parameter values are correct
                 get_parameter_values(rstfile, varnames=parameter_names, checkagainst=parameter_values)
@@ -429,7 +445,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         # all inner loops if iterconstini is active (for parameter estimation)
         #inifiles = [joinpath(rundirs[i], "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d_%03d", i_cycle, 1, i)).nc") for i in 1:num_ens]
         inifiles = [joinpath(rundirs[i], "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d", i_cycle, 0)).nc") for i in 1:num_ens]
-        @assert(length(rstfiles) == num_ens, "Expected to find $num_ens restart files but found $(length(rstfiles)).")
+        if length(rstfiles) ≠ num_ens
+            throw(ROMSError("Expected to find $num_ens restart files but found $(length(rstfiles))."))
+        end
         create_directories(rfm)
         for (irst, rstfile) in enumerate(rstfiles)
             @info "copying $rstfile => $(inifiles[irst])"
@@ -465,7 +483,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             else
                 rfm.logfilename = "roms_$(suffix).log"
 
-                set_output_names(config, suffix)
+                set_output_names!(config, suffix)
                 create_files(rfm)
                 #=
                 @info begin
@@ -506,7 +524,6 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                 # start ROMS
                 #
 
-                #error(" --- THE END FOR NOW --------------------------------------------------------------------------------")
                 start_jobs(rs, rfm)
                 @info "moving model output to \"$(config["storagedir"])\""
                 move_output(rfm, config["storagedir"], filenamemask="*_[mri]*_*.nc", verbose=false)
@@ -522,14 +539,22 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             end
             modfiles = glob("$(config["file_prefix"])_mod_$(suffix)_*.nc", config["storagedir"])
             rstfiles = glob("$(config["file_prefix"])_rst_$(suffix)_*.nc", config["storagedir"])
-            @assert(length(modfiles) == num_ens_curr, "Expected $num_ens_curr mod files but found $(length(modfiles)).")
-            @assert(length(rstfiles) == num_ens_curr, "Expected $num_ens_curr restart files but found $(length(rstfiles)).")
+            if length(modfiles) ≠ num_ens_curr
+                throw(ROMSError("Expected $num_ens_curr mod files but found $(length(modfiles))."))
+            end
+            if length(rstfiles) ≠ num_ens_curr
+                throw(ROMSError("Expected $num_ens_curr restart files but found $(length(rstfiles))."))
+            end
             @assert(issorted(modfiles), "The mod files are not in correct order.")
             @assert(issorted(rstfiles), "The restart files are not in correct order.")
             for (irst, rstfile) in enumerate(rstfiles)
                 cdates = get_time(rstfile)
-                @assert(length(cdates) == 1, "Restart file must have one time step, but found $(length(cdates)) (\"$(rstfile)\").")
-                @assert(cdates[1] == stopdate, "Date in restart file ($(cdates[1])) was expected to be $(stopdate).\nFile: \"$(rstfile)\"")
+                if length(cdates) ≠ 1
+                    throw(ROMSError("Restart file must have one time step, but found $(length(cdates)).", rstfile))
+                end
+                if cdates[1] ≠ stopdate
+                    throw(ROMSError("Date in restart file ($(cdates[1])) was expected to be $(stopdate).", rstfile))
+                end
                 if config["estimationtype"] == "bioparameter"
                     # perform check to see that parameter values are correct
                     get_parameter_values(rstfile, varnames=parameter_names, checkagainst=parameter_values[irst, :])
@@ -564,7 +589,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                         if any(obs_scale .=== missing)
                             @info "Found $(sum(obs_scale .=== missing)) values with obs_scale = 0 which will be excluded."
                         end
-                        @assert length(unique(obs_scale)) <= 2 "Expected [1, missing] in obs_scale but found $(unique(obs_scale))."
+                        if length(unique(obs_scale)) > 2
+                            throw(ROMSError("Expected 1.0 and  missing in obs_scale but found $(join(unique(obs_scale), ", ", " and ")).", modfile))
+                        end
                         obsindex_sub = obs_scale .!== missing
                     else
                         tmp = nc["obs_scale"][obsindex]
@@ -574,7 +601,6 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                             in file \"$(basename(modfile))\":        $(sum(tmp .=== missing))"""
                             obsindex_sub .&= tmp .!== missing
                         end
-                        #@assert(all(obs_scale .== tmp), "Problem with mod file \"$(modfile)\", obs_scale values do not agree with reference.")
                     end
                 end
             end
@@ -693,7 +719,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             elseif config["estimationtype"] == "bioparameter"
                 if (i_iter < num_iter) || !noassimlastiter
                     parameter_values = config["assimilation_function"](rpi, mod_values[:, obsindex_sub], obs_values_sub, parameter_values, obs_info_sub)
-                    @assert(size(parameter_values)==(num_ens, length(parameter_names)), "The output of $(config["assimilation_function"]) has invalid shape (expected $((num_ens, length(parameter_names))) but obtained $(size(parameter_values))).")
+                    if size(parameter_values) ≠ (num_ens, length(parameter_names))
+                        error("The output of $(config["assimilation_function"]) has invalid shape (expected $((num_ens, length(parameter_names))) but obtained $(size(parameter_values))).")
+                    end
                 end
 
                 if display_function !== nothing
@@ -709,23 +737,24 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                     end
                     if config["negative_parameter_response"] == "adjust"
                         # TODO-low allow setting of minval
-                        parameter_values .= max.(parameter_values, 0.1)
-                    elseif config["negative_parameter_response"] == "warn"
-                        @warn("Negative parameter(s).")
-                    else
+                        parameter_values .= max.(parameter_values, 0.001)
+                    elseif config["negative_parameter_response"] ≠ "warn"
                         error("Negative parameter(s).")
                     end
                 end
-                #error(" --- THE END FOR NOW --------------------------------------------------------------------------------")
             elseif config["estimationtype"] == "state"
                 if (i_iter < num_iter) || !noassimlastiter
                     testinfo = nothing
                     if config["assimilation_function_usefileinput"]
-                        # TODO remove these checks
+                        # TODO-low remove these checks
                         ncheck = length(glob(joinpath("*", "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d", i_cycle, i_iter)).nc"), config["rundir"]))
-                        @assert(ncheck == num_ens, "Incorrect number of mod-files (found $ncheck, expected $num_ens).")
+                        if ncheck ≠ num_ens
+                            throw(ROMSError("Incorrect number of mod-files (found $ncheck, expected $num_ens)."))
+                        end
                         ncheck = length(glob("$(config["file_prefix"])_mod_$(suffix)_*.nc", config["storagedir"]))
-                        @assert(ncheck == num_ens, "Incorrect number of ini-files.")
+                        if ncheck ≠ num_ens
+                            throw(ROMSError("Incorrect number of ini-files (found $ncheck, expected $num_ens)."))
+                        end
                         output_raw = config["assimilation_function"](i_cycle, i_iter, config["obsfile"],
                                             config["storagedir"], "$(config["file_prefix"])_mod_$(suffix)_*.nc",
                                             config["rundir"], joinpath("*", "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d", i_cycle, i_iter)).nc"),
@@ -758,7 +787,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                             suffix = @sprintf("test_%03d_%03d", i_cycle, i_iter-1) # note that first run starts at 000
                             rfm.logfilename = "roms_$(suffix).log"
 
-                            set_output_names(config, suffix)
+                            set_output_names!(config, suffix)
                             create_files(rfm)
 
                             set!(rfm, "oceanin", "ININAME", output)
@@ -774,9 +803,12 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                             modfiles_test = glob("$(config["file_prefix"])_mod_$(suffix)_*.nc", config["storagedir"])
                             rstfiles_test = glob("$(config["file_prefix"])_rst_$(suffix)_*.nc", config["storagedir"])
 
-                            @assert(length(modfiles_test) == num_testfiles, "Expected $num_testfiles mod files but found $(length(modfiles_test)).")
-                            @assert(length(rstfiles_test) == num_testfiles, "Expected $num_testfiles rst files but found $(length(rstfiles_test)).")
-
+                            if length(modfiles_test) ≠ num_testfiles
+                                throw(ROMSError("Expected $num_testfiles mod files but found $(length(modfiles_test))."))
+                            end
+                            if length(rstfiles_test) ≠ num_testfiles
+                                throw(ROMSError("Expected $num_testfiles rst files but found $(length(rstfiles_test))."))
+                            end
                             mod_values_test = fill(NaN, (num_testfiles, sum(obsindex)))
 
                             @info "extracting $(sum(obsindex)) mod file values"
@@ -1010,7 +1042,7 @@ if isinteractive()
     elseif endswith(args["config"], ".yaml") || endswith(args["config"], ".yml")
         config = YAML.load(open(args["config"]))
     else
-        error("Configuration file format not yet supported.")
+        throw(ConfigurationError("Configuration file format not yet supported."))
     end
 
     for (key, val) in config
