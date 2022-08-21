@@ -1,11 +1,13 @@
+"""
+    ConfigurationError(message::String, key::String="")
+
+An error or problem related to the ROMS configuration.
+"""
 struct ConfigurationError <: Exception
     message::String
     key::String
-    function ConfigurationError(message::String, key::String)
+    function ConfigurationError(message::String, key::String="")
         return new(message, key)
-    end
-    function ConfigurationError(message::String)
-        return new(message, "")
     end
 end
 
@@ -17,14 +19,16 @@ function Base.showerror(io::IO, e::ConfigurationError)
     end
 end
 
+"""
+    ROMSError(message::String, filename::String="")
+
+A ROMS error related to a failure of ROMS to run, or failure to produce desired output.
+"""
 struct ROMSError <: Exception
     message::String
     filename::String
-    function ROMSError(message::String, filename::String)
+    function ROMSError(message::String, filename::String="")
         return new(message, filename)
-    end
-    function ROMSError(message::String)
-        return new(message, "")
     end
 end
 

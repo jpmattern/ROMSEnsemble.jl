@@ -21,7 +21,9 @@ include("romsstarters.jl")
 include("errors.jl")
 
 """
-TODO: docstring run 2
+    run(configfile::AbstractString; kwargs...)
+
+Start a ROMS ensemble simulation, based on the configuration specified in the file `configfile`.
 """
 function run(configfile::AbstractString; kwargs...)
     config = parse_config(configfile)
@@ -29,8 +31,9 @@ function run(configfile::AbstractString; kwargs...)
 end
 
 """
+    run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_function::Union{Nothing, Function}=nothing)
+
 Start a ROMS ensemble simulation, based on the configuration specified in `config`.
-TODO: docstring run
 """
 function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_function::Union{Nothing, Function}=nothing)
 
@@ -38,7 +41,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
     # get information / perform checks
     #
 
-    global cdate
+    cdate = nothing
     minval = 1e-3
 
     # get current date from initial file
@@ -618,7 +621,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
             end
 
             for k in keys(obs_info)
-                obs_info_sub[v] = obs_info[k][obsindex][obsindex_sub]
+                obs_info_sub[k] = obs_info[k][obsindex][obsindex_sub]
             end
             obs_values_sub = obs_values[obsindex][obsindex_sub]
 

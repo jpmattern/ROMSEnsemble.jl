@@ -1,3 +1,8 @@
+"""
+    ROMSFileManager(rundirs::Union{String, Array{String}}; kwargs...)
+
+A helper type for copying and modifying ROMS-related files.
+"""
 mutable struct ROMSFileManager
     rundirs :: Array{String, 1}
     files :: Dict{String, String}
@@ -5,7 +10,7 @@ mutable struct ROMSFileManager
     shortnames :: Dict{String, String}
     localnames :: Dict{String, String}
     logfilename :: String
-    function ROMSFileManager(rundirs,
+    function ROMSFileManager(rundirs::Union{String, Array{String}},
                      oceanin::String;
                      bioin::String="",
                      s4dvarin::String="",
@@ -22,34 +27,48 @@ mutable struct ROMSFileManager
         if rundirs isa String
             rfm.rundirs = glob(basename(rundirs), dirname(rundirs))
             for d in rfm.rundirs
-                @assert(isdir(d), "\"$d\" must be a directory.")
+                if ! isdir(d)
+                    error("Directory in rundirs \"$d\" must exist.")
+                end
             end
-        elseif rundirs isa Array{String, 1}
+        elseif rundirs isa Array{String}
             for d in rundirs
                 bd = dirname(d)
-                @assert(isdir(bd), "Base directory \"$bd\" must be a directory.")
+                if ! isdir(bd)
+                    error("Base directory \"$bd\" must be a directory.")
+                end
             end
             rfm.rundirs = rundirs
         else
             error("Invalid input for rundirs.")
         end
 
-        @assert(isfile(oceanin), "File \"$oceanin\" does not exist.")
+        if ! isfile(oceanin)
+            error("File \"$oceanin\" does not exist.")
+        end
         rfm.files = Dict("oceanin" => oceanin)
 
         if length(bioin) > 0
-            @assert(isfile(bioin), "File \"$bioin\" does not exist.")
+            if ! isfile(bioin)
+                error("File \"$bioin\" does not exist.")
+            end
             rfm.files["bioin"] = bioin
         end
 
         if length(s4dvarin) > 0
-            @assert(isfile(s4dvarin), "File \"$s4dvarin\" does not exist.")
+            if ! isfile(s4dvarin)
+                error("File \"$s4dvarin\" does not exist.")
+            end
             rfm.files["s4dvarin"] = s4dvarin
         end
 
         if length(obs) > 0
-            @assert(isfile(obs), "File \"$obs\" does not exist.")
-            @assert("s4dvarin" in keys(rfm.files), "Obervation file specification requires s4dvarin specification.")
+            if ! isfile(obs)
+                error("File \"$obs\" does not exist.")
+            end
+            if "s4dvarin" ∉ keys(rfm.files)
+                error("Obervation file specification requires s4dvarin specification.")
+            end
             rfm.files["obs"] = obs
         end
 
@@ -137,7 +156,9 @@ function set!(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{
         end
         return
     end
-    @assert(length(rfm.rundirs) == length(vals), "Length of values ($(length(vals))) must match number of runs ($(length(rfm.rundirs))).")
+    if length(rfm.rundirs) ≠ length(vals)
+        error("Length of values ($(length(vals))) must match number of runs ($(length(rfm.rundirs))).")
+    end
     for (i, d) in enumerate(rfm.rundirs)
         set!(rfm, d, infilekey, key, vals[i])
     end
@@ -145,7 +166,9 @@ function set!(rfm::ROMSFileManager, infilekey::String, key::String, vals::Array{
 end
 
 function move_output(rfm::ROMSFileManager, todir::String; filenamemask::String="*.nc", verbose::Bool=false)
-    @assert(isdir(todir), "Directory \"$(todir)\" must exist.")
+    if ! isdir(todir)
+        error("Directory \"$(todir)\" must exist.")
+    end
     for (i, d) in enumerate(rfm.rundirs)
         suffix = @sprintf("%03d", i)
         move_if_exists(joinpath(d, rfm.logfilename), suffix, todir, verbose=verbose)

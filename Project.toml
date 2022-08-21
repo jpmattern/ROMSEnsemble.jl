@@ -1,7 +1,7 @@
 name = "ROMSEnsemble"
 uuid = "5f3b3127-274a-4d13-ba93-e684c6da3ace"
 authors = ["Jann Paul Mattern <jmattern@ucsc.edu>"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"

@@ -1,10 +1,16 @@
+"""
+Obtain time information from the netCDF file `ncfile`.
+"""
 function get_time(ncfile::AbstractString; timevar::String="ocean_time")
     NCDatasets.Dataset(ncfile) do nc
         return nc[timevar][:]
     end
 end
 
-function set_output_names!(config::Dict, suffix::String)
+"""
+Set the output file name variables in the ROMS input files specified in `config`.
+"""
+function set_output_names!(config::Dict{String, Any}, suffix::String)
     # set local filenames
     rif_ocean = ROMSInputFile(config["ocean_in"])
     for ft in ("gst", "rst", "his", "tlm", "tlf", "adj", "avg", "dia", "sta", "flt")
@@ -30,6 +36,9 @@ function set_output_names!(config::Dict, suffix::String)
     nothing
 end
 
+"""
+Get parameter values from the ROMS output netCDF file `ncfile`.
+"""
 function get_parameter_values(ncfile::String, varnames::Array{String}; checkagainst=nothing, thresh::Float64=1e-6) :: Array{Float64}
     NCDatasets.Dataset(ncfile) do nc
         values = [ncread[v][1] for v in varnames]
@@ -51,14 +60,20 @@ function get_parameter_values(ncfile::String, varnames::Array{String}; checkagai
     return values
 end
 
-function make_abs(s::String) :: String
-    if s[1] != '/'
-        return joinpath(pwd(), s)
+"""
+Turn the path `p` into an absolute one.
+"""
+function make_abs(p::String) :: String
+    if p[1] ≠ '/'
+        return joinpath(pwd(), p)
     else
-        return s
+        return p
     end
 end
 
+"""
+Parse a configuration file to obtain the configuration in `Dict{String, Any}` format.
+"""
 function parse_config(input::AbstractString) :: Dict{String, Any}
     config = YAML.load(open(input); dicttype=Dict{String, Any}) :: Dict{String, Any}
     # initial_conditions

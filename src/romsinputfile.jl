@@ -1,3 +1,8 @@
+"""
+    ROMSInputFile(filename::String)
+
+A helper type for reading from and writing to ROMS text-based input files.
+"""
 struct ROMSInputFile
     filename :: String
     function ROMSInputFile(filename::String)

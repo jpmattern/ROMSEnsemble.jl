@@ -51,6 +51,9 @@ end
 # helper functions
 #
 
+"""
+Read ROMS log file and return whether simulation finished without errors.
+"""
 function run_finished(romslogfile::String) :: Bool
     # look for "ROMS/TOMS: DONE..."
     if !isfile(romslogfile)
@@ -82,21 +85,27 @@ end
 # SrunROMSStarter
 #
 
+"""
+    SrunROMSStarter(numruns::Int, exe::String, ntasks::Int; sleeptime::Float64=0.0)
+
+A ROMSStarter using the workload manager Slurm's `srun` command to start ROMS.
+"""
 mutable struct SrunROMSStarter <: ROMSStarter
     exe :: String
     ntasks :: Int
     sleeptime :: Float64
     pids :: Array{Any, 1}
     function SrunROMSStarter(numruns::Int, exe::String, ntasks::Int; sleeptime::Float64=0.0)
-        @assert(numruns > 0, "Number of runs must be greater than 0.")
-        @assert(isfile(exe), "ROMS executable must exist.")
-        @assert(ntasks > 0, "Number of tasks must be greater than 0.")
-        rs = new()
-        rs.exe = exe
-        rs.ntasks = ntasks
-        rs.sleeptime = sleeptime
-        rs.pids = Array{Any, 1}(undef, numruns)
-        rs
+        if numruns ≤ 0
+            error("Number of runs must be greater than 0.")
+        end
+        if ! isfile(exe)
+            error("ROMS executable must exist.")
+        end
+        if ntasks ≤ 0
+            error("Number of tasks must be greater than 0.")
+        end
+        return new(exe, ntasks, sleeptime, Array{Any, 1}(undef, numruns))
     end
 end
 
@@ -120,6 +129,11 @@ end
 # SBatchROMSStarter
 #
 
+"""
+    SBatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SBatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
+
+A ROMSStarter using the workload manager Slurm's `sbatch` command to start ROMS.
+"""
 mutable struct SBatchROMSStarter <: ROMSStarter
     exe :: String
     ntasks :: Int
@@ -129,10 +143,18 @@ mutable struct SBatchROMSStarter <: ROMSStarter
     jobnameprefix :: String
     regex_matchjid :: Regex
     function SBatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SBatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
-        @assert(numruns > 0, "Number of runs must be greater than 0.")
-        @assert(isfile(exe), "ROMS executable must exist.")
-        @assert(ntasks > 0, "Number of tasks must be greater than 0.")
-        @assert(isfile(sbatchtemplatefile), "The sbatch template (\"$(sbatchtemplatefile)\") file must exist.")
+        if numruns ≤ 0
+            error("Number of runs must be greater than 0.")
+        end
+        if ! isfile(exe)
+            error("ROMS executable must exist.")
+        end
+        if ntasks ≤ 0
+            error("Number of tasks must be greater than 0.")
+        end
+        if ! isfile(sbatchtemplatefile)
+            error("The sbatch template (\"$(sbatchtemplatefile)\") file must exist.")
+        end
         rs = new()
         rs.exe = exe
         rs.ntasks = ntasks
@@ -141,7 +163,7 @@ mutable struct SBatchROMSStarter <: ROMSStarter
         rs.jids = Array{Int, 1}(undef, numruns)
         rs.jobnameprefix = jobnameprefix
         rs.regex_matchjid = regex_matchjid
-        rs
+        return rs
     end
 end
 

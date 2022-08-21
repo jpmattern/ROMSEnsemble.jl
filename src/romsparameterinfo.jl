@@ -16,6 +16,11 @@ end
 # latin hypercube sampling for normalized parameters
 #
 
+"""
+    LHSROMSParameterInfo(parameter_names::Vector{String}, normalizing_values::Vector{Float64}, normrange::Array{Float64})
+
+A helper type for drawing biological parameters using latin hypercube sampling for ROMS parameter estimation.
+"""
 struct LHSROMSParameterInfo <: ROMSParameterInfo
     parameter_names :: Array{String, 1}
     normalizing_values :: Array{Float64, 1}
