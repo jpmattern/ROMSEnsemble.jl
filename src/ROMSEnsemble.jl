@@ -20,7 +20,19 @@ include("romsparameterinfo.jl")
 include("romsstarters.jl")
 include("errors.jl")
 
-function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_function::Union{Nothing, Function}=nothing, biolog_sqobserror::Float64=0.09)
+"""
+TODO: docstring run 2
+"""
+function run(configfile::AbstractString; kwargs...)
+    config = parse_config(configfile)
+    return run(config; kwargs...)
+end
+
+"""
+Start a ROMS ensemble simulation, based on the configuration specified in `config`.
+TODO: docstring run
+"""
+function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_function::Union{Nothing, Function}=nothing)
 
     #
     # get information / perform checks
@@ -273,9 +285,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         iterconstini = config["iterconstini"]::Bool
         if haskey(config, "refillensemble")
             refillensemble = config["refillensemble"]::Bool
-            @info "refillensemble: $(config["refillensemble"]::Bool)"
+            @debug "refillensemble: $(config["refillensemble"]::Bool)"
         end
-    elseif config["cycle_setup"] == "4DEnsVar"
+    elseif config["cycle_setup"] == "4DEnOI"
         cycle_setup = [num_ens, 1]
         if config["estimationtype"] == "bioparameter"
             startfrom1 = true
@@ -605,8 +617,8 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                 end
             end
 
-            for v in keys(obs_info)
-                obs_info_sub[v] = obs_info[v][obsindex][obsindex_sub]
+            for k in keys(obs_info)
+                obs_info_sub[v] = obs_info[k][obsindex][obsindex_sub]
             end
             obs_values_sub = obs_values[obsindex][obsindex_sub]
 
@@ -845,8 +857,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                                     "normcost" => [mean(((mod_values_test[i, obsindex_sub][cind].-obs_values_sub[cind]).^2)./obs_info_sub["obs_error"][cind]) for i in 1:num_testfiles],
                                 )
                             end
-                            # TODO change 3 Any to Array{Float64, 1}
-                            stats[0] = Dict{String, Any}("numobs" => length(obs_values_sub),
+                            stats[0] = Dict{String, Array{Float64}}("numobs" => length(obs_values_sub),
                                 "rmse" => [sqrt(mean((mod_values_test[i, obsindex_sub].-obs_values_sub).^2)) for i in 1:num_testfiles],
                                 "bias" => [mean(mod_values_test[i, obsindex_sub])-mean(obs_values_sub) for i in 1:num_testfiles],
                                 "normcost" => [mean(((mod_values_test[i, obsindex_sub].-obs_values_sub).^2)./obs_info_sub["obs_error"]) for i in 1:num_testfiles],
@@ -862,7 +873,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                             end
                             cind = cind .== false #(!).cind
                             for i in 1:num_testfiles
-                                stats[0]["normcost_biolog"][i] += sum(((log.(max.(minval, mod_values_test[i, obsindex_sub][cind])).-log.(max.(minval, obs_values_sub[cind]))).^2)./biolog_sqobserror)
+                                stats[0]["normcost_biolog"][i] += sum(((log.(max.(minval, mod_values_test[i, obsindex_sub][cind])).-log.(max.(minval, obs_values_sub[cind]))).^2)./obs_info_sub["obs_error"][cind])
                                 stats[0]["normcost_biolog"][i] /= length(cind)
                             end
 
