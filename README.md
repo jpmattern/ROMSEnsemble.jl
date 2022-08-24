@@ -6,4 +6,4 @@
 
 ## Issues and Discussions
 
-Please use the issues page to report issues and the discussions page for discussions. **ROMSEnsemble.jl** was initially created and is till being used for my personal research, and I would be willing expand it, if there is interest.
+Please use the issues page to report issues and the discussions page for discussions. **ROMSEnsemble.jl** was initially created and is still being used for my personal research, and I would be happy to expand it, if there is interest.
