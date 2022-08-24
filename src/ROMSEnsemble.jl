@@ -12,6 +12,8 @@ import Dates
 import Printf: @sprintf
 import Glob: glob
 
+export run, parse_config
+
 include("assimfunctions.jl")
 include("helperfunctions.jl")
 include("romsfilemanagers.jl")
@@ -70,10 +72,15 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         throw(ConfigurationError("Invalid format for \"initial_conditions\"."))
     end
 
+    if ! haskey(config, "assimilation_function")
+        throw(ConfigurationError("No assimilation function specified.", "assimilation_function"))
+    end
+
     if haskey(config, "use_normcost") && config["use_normcost"]
         @warn "The option use_normedcost is deprecated."
         config["costtype"] = "normcost"
     end
+
     if ! haskey(config, "costtype")
         config["costtype"] = "rmse"
     end
@@ -733,7 +740,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                 println("Skipping this data assimilation cycle.")
             elseif config["estimationtype"] == "bioparameter"
                 if (i_iter < num_iter) || !noassimlastiter
-                    parameter_values = config["assimilation_function"](rpi, mod_values[:, obsindex_sub], obs_values_sub, parameter_values, obs_info_sub)
+                    parameter_values = config["assimilation_function"](i_cycle, i_iter, rpi, mod_values[:, obsindex_sub], obs_values_sub, parameter_values, obs_info_sub)
                     if size(parameter_values) ≠ (num_ens, length(parameter_names))
                         error("The output of $(config["assimilation_function"]) has invalid shape (expected $((num_ens, length(parameter_names))) but obtained $(size(parameter_values))).")
                     end

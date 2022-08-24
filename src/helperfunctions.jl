@@ -27,7 +27,7 @@ function set_output_names!(config::Dict{String, Any}, suffix::String)
     end
     if length(config["s4dvar_in"]) > 0
         ft = "mod"
-        k = uppercase(ft)*"name"
+        k = uppercase(ft) * "name"
         v = "$(config["file_prefix"])_$(ft)_$(suffix).nc"
         #@info "for template: setting $k=$v"
         rif_4dvar = ROMSInputFile(config["s4dvar_in"])
@@ -71,11 +71,31 @@ function make_abs(p::String) :: String
     end
 end
 
+
+function _replace_patterns(d::Dict, patterns::Tuple{Tuple{String, String}})
+    for (k,v) in d
+        if v isa AbstractString
+            for pattern in patterns
+                # replace both $HOME and ${HOME}
+                d[k] = replace(d[k], "\$" * pattern[1] => pattern[2])
+                d[k] = replace(d[k], "\${" * pattern[1] * "}" => pattern[2])
+            end
+        elseif v isa Dict
+            _replace_patterns(d[k], patterns)
+        end
+    end
+end
+
+
 """
 Parse a configuration file to obtain the configuration in `Dict{String, Any}` format.
 """
 function parse_config(input::AbstractString) :: Dict{String, Any}
     config = YAML.load(open(input); dicttype=Dict{String, Any}) :: Dict{String, Any}
+    # search and replace $HOME or ${HOME}
+    patterns = (("HOME", homedir()),)
+    _replace_patterns(config, patterns)
+
     # initial_conditions
     if haskey(config, "initial_conditions") && config["initial_conditions"] isa AbstractString
         config["initial_conditions"] = glob(basename(config["initial_conditions"]), dirname(config["initial_conditions"]))
@@ -84,5 +104,6 @@ function parse_config(input::AbstractString) :: Dict{String, Any}
     if haskey(config, "assimilation_function") && config["assimilation_function"] isa AbstractString
         config["assimilation_function"] = eval(Meta.parse(config["assimilation_function"])) :: Function
     end
+
     return config
 end
