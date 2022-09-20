@@ -291,7 +291,11 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
     if config["cycle_setup"] isa Array
         cycle_setup = config["cycle_setup"]
         startfrom1 = config["startfrom1"]::Bool
-        noassimlastiter = config["noassimlastiter"]::Bool
+        if haskey(config, "noassimlastiter")
+            noassimlastiter = config["noassimlastiter"]::Bool
+        else
+            noassimlastiter = true
+        end
         iterconstini = config["iterconstini"]::Bool
         if haskey(config, "refillensemble")
             refillensemble = config["refillensemble"]::Bool
@@ -320,13 +324,28 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
 
     rundirs = [joinpath(config["rundir"], @sprintf("%03d", i)) for i in 1:num_ens]
 
-    rfm = ROMSFileManager(rundirs, config["ocean_in"], bioin=config["bio_in"], s4dvarin=config["s4dvar_in"], obs=config["obsfile"])
-    if haskey(config, "ROMSStarter")
-        rs = config["ROMSStarter"]
+    if haskey(config, "bio_in")
+        rfm = ROMSFileManager(rundirs, config["ocean_in"], bioin=config["bio_in"], s4dvarin=config["s4dvar_in"], obs=config["obsfile"])
     else
-        # TODO-low modify
-        #rs = SBatchROMSStarter(num_ens, config["executable"], ntasks, joinpath(homedir(), "shellscripts", "templates", "sbatch_job.template"), sleeptime=1.0, jobnameprefix="ROMSEnsemble.jl")
-        rs = SBatchROMSStarter(num_ens, config["executable"], ntasks, joinpath(homedir(), "shellscripts", "run_roms_da.git", "templates", "sbatch_job.template"), sleeptime=1.0, jobnameprefix="ROMSEnsemble.jl")
+        rfm = ROMSFileManager(rundirs, config["ocean_in"], s4dvarin=config["s4dvar_in"], obs=config["obsfile"])
+    end
+
+    if ! haskey(config, "ROMSStarter")
+        throw(ConfigurationError("The ROMSStarter variable is missing from the configuration.", "ROMSStarter"))
+    end
+
+    if config["ROMSStarter"] isa ROMSStarter
+        rs = config["ROMSStarter"]::ROMSStarter
+    elseif config["ROMSStarter"] == "sbatch"
+        if ! haskey(config, "batchscript")
+            throw(ConfigurationError("Using the sbatch ROMS starter requires specification of \"batchscript\" variable.", "batchscript"))
+        end
+        if ! isfile(config["batchscript"])
+            throw(ConfigurationError("The batch script file \"$(config["batchscript"])\" does not exist.", "batchscript"))
+        end
+        rs = SbatchROMSStarter(num_ens, config["executable"], ntasks, config["batchscript"], sleeptime=1.0, jobnameprefix="ROMSEnsemble.jl")
+    elseif config["ROMSStarter"] == "srun"
+        rs = SrunROMSStarter(num_ens, config["executable"], ntasks; sleeptime=1.0)
     end
 
     #
@@ -781,7 +800,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                                             config["storagedir"], "$(config["file_prefix"])_mod_$(suffix)_*.nc",
                                             config["rundir"], joinpath("*", "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d", i_cycle, i_iter)).nc"),
                                             findfirst(obsindex), findlast(obsindex))
-                    elseif config["assimilation_function_classic"]
+                    elseif haskey(config, "assimilation_function_classic") && config["assimilation_function_classic"]
                         # note: added here for backwards compatibility
                         output_raw = config["assimilation_function"](mod_values[:, obsindex_sub], obs_values_sub, inifiles, obs_info_sub)
                     else

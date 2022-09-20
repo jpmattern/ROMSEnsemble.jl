@@ -126,15 +126,15 @@ function wait_for(rs::SrunROMSStarter, irun::Int)
 end
 
 #
-# SBatchROMSStarter
+# SbatchROMSStarter
 #
 
 """
-    SBatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SBatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
+    SbatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SbatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
 
 A ROMSStarter using the workload manager Slurm's `sbatch` command to start ROMS.
 """
-mutable struct SBatchROMSStarter <: ROMSStarter
+mutable struct SbatchROMSStarter <: ROMSStarter
     exe :: String
     ntasks :: Int
     sleeptime :: Float64
@@ -142,7 +142,7 @@ mutable struct SBatchROMSStarter <: ROMSStarter
     sbatchtemplatefile :: String
     jobnameprefix :: String
     regex_matchjid :: Regex
-    function SBatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SBatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
+    function SbatchROMSStarter(numruns::Int, exe::String, ntasks::Int, sbatchtemplatefile::String; sleeptime::Float64=0.0, jobnameprefix::String="SbatchROMSStarter", regex_matchjid::Regex=r".*job +([0-9]+)")
         if numruns ≤ 0
             error("Number of runs must be greater than 0.")
         end
@@ -167,20 +167,17 @@ mutable struct SBatchROMSStarter <: ROMSStarter
     end
 end
 
-function Base.show(io::IO, rs::SBatchROMSStarter)
-    print(io, "SBatchROMSStarter")
+function Base.show(io::IO, rs::SbatchROMSStarter)
+    print(io, "SbatchROMSStarter")
 end
 
-function start_job(rs::SBatchROMSStarter, irun::Int, rundir::String, oceaninfilename::String, logfilename::String; commandargs::Union{Nothing, String}=nothing)
+function start_job(rs::SbatchROMSStarter, irun::Int, rundir::String, oceaninfilename::String, logfilename::String; commandargs::Union{Nothing, String}=nothing)
     sbatchjobname = rs.jobnameprefix*"_"*@sprintf("%03d", irun)
 
     # copy template file to rundir
     sbatchfile = joinpath(rundir, "sbatch.bash")
     cp(rs.sbatchtemplatefile, sbatchfile, force=true)
 
-    # temporarily added --exclude=node27, node30, node31, node32
-    # temporarily added --exclude=node01, node08, node09, node10, node11
-    # temporarily added --partition=nrt
     if commandargs === nothing
         cmd = `sbatch --chdir $(rundir) --job-name="$sbatchjobname" --export="ALL,ROMS_EXECUTABLE=$(rs.exe),ROMS_INFILE=$(oceaninfilename)" --ntasks $(rs.ntasks) --output="$(logfilename)" $(sbatchfile)`
     else
@@ -191,6 +188,7 @@ function start_job(rs::SBatchROMSStarter, irun::Int, rundir::String, oceaninfile
     try
         # expecting something like "Submitted batch job 1234"
         rs.jids[irun] = parse(Int, match(rs.regex_matchjid, tmp).captures[1])
+        @debug "job ID: $(rs.jids[irun])"
     catch
         @warn "Failed to obtain job ID for submitted job."
         rs.jids[irun] = -1
@@ -199,7 +197,7 @@ function start_job(rs::SBatchROMSStarter, irun::Int, rundir::String, oceaninfile
     nothing
 end
 
-function wait_for(rs::SBatchROMSStarter, irun::Int)
+function wait_for(rs::SbatchROMSStarter, irun::Int)
     cmd = `squeue -j $(rs.jids[irun]) --noheader`
     try
         while length(read(pipeline(cmd))) > 0
