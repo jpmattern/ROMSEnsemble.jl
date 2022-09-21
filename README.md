@@ -9,6 +9,9 @@
 **ROMSEnsemble.jl** requires a working ROMS setup, including a ROMS executable compiled with the `VERIFICATION` option, so that ROMS accepts ROMS observations files as input and so that it outputs the model state at the observation locations. With that in place,  **ROMSEnsemble.jl** is configured using a configuration YAML file (or, alternatively, a configuration contained in a Julia `Dict{String,Any}`) and a modified Slurm sbatch script if `sbatch` is used to run ROMS using Slurm.
 
 Here is example configuration file:
+<details>
+<summary>view configuration</summary>
+
 ```
 %YAML 1.2
 ---
@@ -120,6 +123,8 @@ ROMSStarter: "sbatch"
 # for this file is described in the wiki.
 batchscript: "$HOME/romsensemble/data/sbatch_script.template"
 ```
+
+</details>
 
 ## Issues and Discussions
 
