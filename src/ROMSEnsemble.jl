@@ -76,17 +76,16 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         throw(ConfigurationError("No assimilation function specified.", "assimilation_function"))
     end
 
-    if haskey(config, "use_normcost") && config["use_normcost"]
-        @warn "The option use_normedcost is deprecated."
-        config["costtype"] = "normcost"
-    end
-
     if ! haskey(config, "costtype")
-        config["costtype"] = "rmse"
+        config["costtype"] = "normcost"
     end
 
     if ! haskey(config, "estimationtype")
         config["estimationtype"] = "bioparameter"
+    end
+
+    if ! haskey(config, "file_prefix")
+        config["file_prefix"] = "romsensemble"
     end
 
     if ! haskey(config, "spinup_days")
@@ -107,6 +106,11 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         else
             if config["negative_parameter_response"] ∉ ("warn", "error", "adjust")
                 throw(ConfigurationError("Value of negative_parameter_response must be one of \"warn\", \"error\", \"adjust\"."))
+            end
+        end
+        if config["negative_parameter_response"] == "adjust"
+            if ! haskey(config, "negative_parameter_minval")
+                config["negative_parameter_minval"] = 0.0
             end
         end
     end
@@ -146,7 +150,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
     #
 
     if ! haskey(config, "obsfile_variables")
-        config["obsfile_variables"] = ("obs_time", "obs_value", "obs_error", "obs_type", "obs_provenance")
+        config["obsfile_variables"] = ["obs_time", "obs_value", "obs_error", "obs_type", "obs_provenance"]
     end
 
     obs_info = Dict{String, Any}()
@@ -312,6 +316,9 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         noassimlastiter = true
     elseif config["cycle_setup"] == "EnKF"
         cycle_setup = [num_ens, num_ens] # NOTE changed 2020-05-04
+        if config["estimationtype"] == "bioparameter"
+            iterconstini = true
+        end
         noassimlastiter = true
     else
         throw(ConfigurationError("Invalid cycle setup \"$(config["cycle_setup"])\".", "cycle_setup"))
@@ -778,7 +785,7 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                     end
                     if config["negative_parameter_response"] == "adjust"
                         # TODO-low allow setting of minval
-                        parameter_values .= max.(parameter_values, 0.001)
+                        parameter_values .= max.(parameter_values, config["negative_parameter_minval"])
                     elseif config["negative_parameter_response"] ≠ "warn"
                         error("Negative parameter(s).")
                     end
@@ -800,14 +807,11 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
                                             config["storagedir"], "$(config["file_prefix"])_mod_$(suffix)_*.nc",
                                             config["rundir"], joinpath("*", "$(config["file_prefix"])_ini_$(@sprintf("%03d_%03d", i_cycle, i_iter)).nc"),
                                             findfirst(obsindex), findlast(obsindex))
-                    elseif haskey(config, "assimilation_function_classic") && config["assimilation_function_classic"]
-                        # note: added here for backwards compatibility
-                        output_raw = config["assimilation_function"](mod_values[:, obsindex_sub], obs_values_sub, inifiles, obs_info_sub)
                     else
                         output_raw = config["assimilation_function"](i_iter, num_iter, mod_values[:, obsindex_sub], obs_values_sub, inifiles, obs_info_sub)
                     end
                     if isa(output_raw, Tuple)
-                        # for A4DVar
+                        # for 4DEnOI
                         output, testinfo = output_raw
                     else
                         output = output_raw
