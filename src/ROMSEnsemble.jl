@@ -76,6 +76,10 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         throw(ConfigurationError("No assimilation function specified.", "assimilation_function"))
     end
 
+    if ! haskey(config, "assimilation_function_usefileinput")
+        config["assimilation_function_usefileinput"] = false
+    end
+
     if ! haskey(config, "costtype")
         config["costtype"] = "normcost"
     end
@@ -92,12 +96,12 @@ function run(config::Dict{String, Any}; allow_skip_da::Bool=true, display_functi
         config["spinup_days"] = 0
     end
 
-    if ! haskey(config, "assimilation_function_usefileinput")
-        config["assimilation_function_usefileinput"] = false
-    end
-
     if ! haskey(config, "cleanup_on_success")
         config["cleanup_on_success"] = false
+    end
+
+    if ! haskey(config, "timestep_threshold")
+        config["timestep_threshold"] = 10
     end
 
     if config["estimationtype"] == "bioparameter"
