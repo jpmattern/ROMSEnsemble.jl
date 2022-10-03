@@ -126,6 +126,8 @@ batchscript: "$HOME/romsensemble/data/sbatch_script.template"
 
 </details>
 
+More information is contained in the [Wiki](../../wiki).
+
 ## Issues and Discussions
 
 Please use the issues page to report issues and the discussions page for discussions. **ROMSEnsemble.jl** was initially created and is still being used for my personal research, and I would be happy to expand it, if there is interest.
