@@ -1,4 +1,4 @@
-# ROMSEnsemble.jl: A package for ROMS-based ensemble data assimilation in Julia. 
+# ROMSEnsemble.jl: A package for ROMS-based ensemble data assimilation in the Julia language. 
 
 [![DOI](https://zenodo.org/badge/525156733.svg)](https://zenodo.org/badge/latestdoi/525156733)
 
