@@ -1,5 +1,7 @@
 # ROMSEnsemble.jl
 
+[![DOI](https://zenodo.org/badge/525156733.svg)](https://zenodo.org/badge/latestdoi/525156733)
+
 **ROMSEnsemble.jl** is used to run ocean model ensembles and perform ensemble-based data assimilation using the Regional Ocean Modeling System ([ROMS](https://www.myroms.org/)) in [the Julia programming language](https://julialang.org/). It automates starting and stopping of ROMS simulations, modifying input files and extracting output, and it requires an existing ROMS setup and a computer with a workload manager, such as [Slurm](https://slurm.schedmd.com/). **ROMSEnsemble.jl** does not provide any data assimilation capabilities, that is, it extracts the necessary state and parameter information from a model ensemble and passes it to a user-supplied data assimilation function.
 
 **ROMSEnsemble.jl** is based on and expands upon this [MATLAB code](https://github.com/bwang63/EnKF_3D_github).
